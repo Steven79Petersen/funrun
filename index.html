@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+<meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+
     <title>Fun Run Game</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -78,7 +81,7 @@
                 
                 // Use newer version of pygame-web
                 const script = document.createElement('script');
-                script.src = 'https://pygame-web.github.io/archives/0.9/pythons.js';
+                script.src = 'https://pygame-web.github.io/archives/0.8/pythons.js';
                 script.type = 'module';
                 script.setAttribute('data-python', 'python3.11');
                 script.setAttribute('data-os', 'vtx,fs,snd,gui');
