@@ -3,9 +3,9 @@
 <head>
     <title>Fun Run Game</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
-    <link rel="icon" href="favicon.ico"> <!-- Prevents favicon.ico 404 error -->
+    <link rel="icon" href="data:,">
     <style>
         body {
             margin: 0;
@@ -48,8 +48,12 @@
         }
         
         @keyframes glow {
-            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255,255,255,0.3); }
-            to { text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.6); }
+            from { 
+                filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+            }
+            to { 
+                filter: drop-shadow(0 0 20px rgba(255,255,255,0.6));
+            }
         }
         
         #start-button {
@@ -126,6 +130,21 @@
             font-family: monospace;
             white-space: pre-wrap;
         }
+        
+        .error-button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .error-button:hover {
+            background: #cc3333;
+        }
     </style>
 </head>
 <body>
@@ -142,7 +161,7 @@
 
     <script>
         // Configuration
-        const CONFIG = {
+        var CONFIG = {
             PYGAME_SOURCES: [
                 'https://pygame-web.github.io/archives/0.21/pythons.js',
                 'https://raw.githack.com/pygame-web/pygame-web/0.21/pythons.js',
@@ -150,11 +169,11 @@
             ],
             PYTHON_VERSION: 'python3.11',
             REPO_URL: 'https://pygame-web.github.io/repo/',
-            LOAD_TIMEOUT: 85000 // 45 seconds
+            LOAD_TIMEOUT: 85000
         };
 
         // Game state
-        const GameState = {
+        var GameState = {
             pygameReady: false,
             userInteracted: false,
             gameStarted: false,
@@ -162,7 +181,7 @@
         };
 
         // DOM elements
-        const elements = {
+        var elements = {
             overlay: document.getElementById('loading-overlay'),
             canvas: document.getElementById('canvas'),
             startButton: document.getElementById('start-button'),
@@ -173,8 +192,8 @@
 
         // Debug logging
         function debugLog(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logMessage = `[${timestamp}] ${message}`;
+            var timestamp = new Date().toLocaleTimeString();
+            var logMessage = '[' + timestamp + '] ' + message;
             GameState.debug.push(logMessage);
             console.log(logMessage);
             
@@ -194,76 +213,96 @@
         }
 
         function showError(message) {
-            const safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            elements.errorMessage.innerHTML = '<div>' + safeMessage + '</div><div style="margin-top: 10px; font-size: 12px;"><button onclick="window.showDebug()">Show Debug Info</button><button onclick="location.reload()">Refresh Page</button></div>';
+            var safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            var errorHtml = '<div>' + safeMessage + '</div>';
+            errorHtml += '<div style="margin-top: 10px; font-size: 12px;">';
+            errorHtml += '<button class="error-button" onclick="window.showDebug()">Show Debug Info</button>';
+            errorHtml += '<button class="error-button" onclick="location.reload()">Refresh Page</button>';
+            errorHtml += '</div>';
+            
+            elements.errorMessage.innerHTML = errorHtml;
             elements.errorMessage.style.display = 'block';
             elements.startButton.style.display = 'none';
             debugLog('Error: ' + message);
         }
 
         // Pygame-web initialization
-        async function loadPygameWeb() {
-            // Remove any existing scripts
-            document.querySelectorAll('script[src*="pythons.js"]').forEach(function(s) {
-                s.remove();
-            });
-            
-            for (let i = 0; i < CONFIG.PYGAME_SOURCES.length; i++) {
-                const source = CONFIG.PYGAME_SOURCES[i];
-                try {
-                    updateStatus('Loading from ' + new URL(source).hostname + '...');
-                    debugLog('Trying source: ' + source);
+        function loadPygameWeb() {
+            return new Promise(function(resolve, reject) {
+                // Remove any existing scripts
+                var existingScripts = document.querySelectorAll('script[src*="pythons.js"]');
+                for (var i = 0; i < existingScripts.length; i++) {
+                    existingScripts[i].remove();
+                }
+                
+                var sourceIndex = 0;
+                
+                function tryNextSource() {
+                    if (sourceIndex >= CONFIG.PYGAME_SOURCES.length) {
+                        var errorMsg = 'Failed to load pygame-web from all sources. Please try:\n1. Refreshing the page\n2. Using Chrome/Edge browser\n3. Checking your network connection';
+                        showError(errorMsg);
+                        resolve(false);
+                        return;
+                    }
                     
-                    const script = document.createElement('script');
-                    script.src = source;
-                    script.type = 'module';
-                    script.setAttribute('data-python', CONFIG.PYTHON_VERSION);
-                    script.setAttribute('data-os', 'vtx,fs,snd,gui');
-                    script.setAttribute('data-repo', CONFIG.REPO_URL);
+                    var source = CONFIG.PYGAME_SOURCES[sourceIndex];
                     
-                    // Manual configuration
-                    script.onload = function() {
-                        window.pygameConfig = {
-                            stdio: 'inherit',
-                            python: CONFIG.PYTHON_VERSION,
-                            env: { PYTHONPATH: '/lib/python3.11' }
+                    try {
+                        updateStatus('Loading from ' + new URL(source).hostname + '...');
+                        debugLog('Trying source: ' + source);
+                        
+                        var script = document.createElement('script');
+                        script.src = source;
+                        script.type = 'module';
+                        script.setAttribute('data-python', CONFIG.PYTHON_VERSION);
+                        script.setAttribute('data-os', 'vtx,fs,snd,gui');
+                        script.setAttribute('data-repo', CONFIG.REPO_URL);
+                        
+                        script.onload = function() {
+                            window.pygameConfig = {
+                                stdio: 'inherit',
+                                python: CONFIG.PYTHON_VERSION,
+                                env: { PYTHONPATH: '/lib/python3.11' }
+                            };
+                            
+                            // Check for initialization
+                            var checkCount = 0;
+                            var check = setInterval(function() {
+                                checkCount++;
+                                if (window.pygame && typeof window.pygame.import === 'function') {
+                                    clearInterval(check);
+                                    debugLog('Successfully loaded from ' + source);
+                                    resolve(true);
+                                } else if (checkCount > CONFIG.LOAD_TIMEOUT / 500) {
+                                    clearInterval(check);
+                                    debugLog('Timeout loading from ' + source);
+                                    sourceIndex++;
+                                    tryNextSource();
+                                }
+                            }, 500);
                         };
-                    };
-
-                    await new Promise(function(resolve, reject) {
+                        
                         script.onerror = function() {
-                            reject(new Error('Failed to load from ' + source));
+                            debugLog('Failed with source ' + source + ': Script error');
+                            var failedScripts = document.querySelectorAll('script[src="' + source + '"]');
+                            for (var i = 0; i < failedScripts.length; i++) {
+                                failedScripts[i].remove();
+                            }
+                            sourceIndex++;
+                            tryNextSource();
                         };
+                        
                         document.head.appendChild(script);
                         
-                        // Check for initialization
-                        const check = setInterval(function() {
-                            if (window.pygame && typeof window.pygame.import === 'function') {
-                                clearInterval(check);
-                                resolve();
-                            }
-                        }, 500);
-                        
-                        setTimeout(function() {
-                            clearInterval(check);
-                            reject(new Error('Timeout loading from ' + source));
-                        }, CONFIG.LOAD_TIMEOUT);
-                    });
-                    
-                    debugLog('Successfully loaded from ' + source);
-                    return true;
-                    
-                } catch (error) {
-                    debugLog('Failed with source ' + source + ': ' + error.message);
-                    // Remove failed script
-                    document.querySelectorAll('script[src="' + source + '"]').forEach(function(s) {
-                        s.remove();
-                    });
+                    } catch (error) {
+                        debugLog('Failed with source ' + source + ': ' + error.message);
+                        sourceIndex++;
+                        tryNextSource();
+                    }
                 }
-            }
-            
-            showError('Failed to load pygame-web from all sources. Please try:\\n1. Refreshing the page\\n2. Using Chrome/Edge browser\\n3. Checking your network connection');
-            return false;
+                
+                tryNextSource();
+            });
         }
 
         // Audio initialization
@@ -279,58 +318,64 @@
         }
 
         // Game start
-        async function handleUserInteraction() {
+        function handleUserInteraction() {
             if (GameState.userInteracted) return;
             GameState.userInteracted = true;
 
             elements.startButton.style.display = 'none';
             updateStatus("Starting game...");
 
+            // Setup
+            initializeAudio();
+            elements.canvas.width = 800;
+            elements.canvas.height = 600;
+
+            if (!window.pygame) {
+                debugLog('Game start failed: pygame-web not loaded');
+                showError('Game failed to start: pygame-web not loaded');
+                GameState.userInteracted = false;
+                elements.startButton.style.display = 'block';
+                return;
+            }
+
+            // Install dependencies
+            updateStatus("Installing dependencies...");
+            
+            var installPromise = Promise.resolve();
             try {
-                // Setup
-                initializeAudio();
-                elements.canvas.width = 800;
-                elements.canvas.height = 600;
-
-                if (!window.pygame) {
-                    throw new Error("pygame-web not loaded");
-                }
-
-                // Install dependencies
-                updateStatus("Installing dependencies...");
-                try {
-                    await window.pygame.installPackages(['pygame-base']);
-                    await new Promise(function(resolve) {
-                        setTimeout(resolve, 2000);
-                    });
-                } catch (installError) {
-                    debugLog('Dependency install warning: ' + installError.message);
-                }
-
+                installPromise = window.pygame.installPackages(['pygame-base']);
+            } catch (installError) {
+                debugLog('Dependency install warning: ' + installError.message);
+            }
+            
+            installPromise.then(function() {
+                return new Promise(function(resolve) {
+                    setTimeout(resolve, 2000);
+                });
+            }).then(function() {
                 // Load main game
                 updateStatus("Loading game...");
-                await window.pygame.import("./assets/main.py", {
+                return window.pygame.import("./assets/main.py", {
                     argv: ['main.py'],
                     embed: true
                 });
-                
+            }).then(function() {
                 // Success
                 GameState.gameStarted = true;
                 elements.overlay.classList.add('hidden');
                 setTimeout(function() {
                     elements.overlay.style.display = 'none';
                 }, 500);
-
-            } catch (error) {
+            }).catch(function(error) {
                 debugLog('Game start failed: ' + error.message);
                 showError('Game failed to start: ' + error.message);
                 GameState.userInteracted = false;
                 elements.startButton.style.display = 'block';
-            }
+            });
         }
 
         // Main initialization
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             // Event listeners
             elements.startButton.addEventListener('click', handleUserInteraction);
             elements.canvas.addEventListener('click', function() {
@@ -340,18 +385,20 @@
             });
 
             // Load pygame
-            const loaded = await loadPygameWeb();
-            if (!loaded) return;
-
-            // Ready to start
-            GameState.pygameReady = true;
-            updateStatus("Ready to start! 🎮");
-            elements.startButton.style.display = 'block';
+            loadPygameWeb().then(function(loaded) {
+                if (!loaded) return;
+                
+                // Ready to start
+                GameState.pygameReady = true;
+                updateStatus("Ready to start! 🎮");
+                elements.startButton.style.display = 'block';
+            });
         });
 
         // Global error handling
         window.addEventListener('error', function(event) {
-            debugLog('Global error: ' + (event.error ? event.error.message : event.message));
+            var errorMsg = event.error ? event.error.message : event.message;
+            debugLog('Global error: ' + errorMsg);
             if (!GameState.gameStarted) {
                 showError("Unexpected error occurred. Check debug info.");
             }
