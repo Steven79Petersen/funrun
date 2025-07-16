@@ -185,7 +185,7 @@
 
         function updateStatus(message) {
             elements.statusMessage.textContent = message;
-            debugLog(`Status: ${message}`);
+            debugLog('Status: ' + message);
         }
 
         function showDebug() {
@@ -195,27 +195,24 @@
 
         function showError(message) {
             const safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            elements.errorMessage.innerHTML = `
-                <div>${safeMessage}</div>
-                <div style="margin-top: 10px; font-size: 12px;">
-                    <button onclick="window.showDebug()">Show Debug Info</button>
-                    <button onclick="location.reload()">Refresh Page</button>
-                </div>
-            `;
+            elements.errorMessage.innerHTML = '<div>' + safeMessage + '</div><div style="margin-top: 10px; font-size: 12px;"><button onclick="window.showDebug()">Show Debug Info</button><button onclick="location.reload()">Refresh Page</button></div>';
             elements.errorMessage.style.display = 'block';
             elements.startButton.style.display = 'none';
-            debugLog(`Error: ${message}`);
+            debugLog('Error: ' + message);
         }
 
         // Pygame-web initialization
         async function loadPygameWeb() {
             // Remove any existing scripts
-            document.querySelectorAll('script[src*="pythons.js"]').forEach(s => s.remove());
+            document.querySelectorAll('script[src*="pythons.js"]').forEach(function(s) {
+                s.remove();
+            });
             
-            for (const source of CONFIG.PYGAME_SOURCES) {
+            for (let i = 0; i < CONFIG.PYGAME_SOURCES.length; i++) {
+                const source = CONFIG.PYGAME_SOURCES[i];
                 try {
-                    updateStatus(`Loading from ${new URL(source).hostname}...`);
-                    debugLog(`Trying source: ${source}`);
+                    updateStatus('Loading from ' + new URL(source).hostname + '...');
+                    debugLog('Trying source: ' + source);
                     
                     const script = document.createElement('script');
                     script.src = source;
@@ -225,7 +222,7 @@
                     script.setAttribute('data-repo', CONFIG.REPO_URL);
                     
                     // Manual configuration
-                    script.onload = () => {
+                    script.onload = function() {
                         window.pygameConfig = {
                             stdio: 'inherit',
                             python: CONFIG.PYTHON_VERSION,
@@ -233,35 +230,39 @@
                         };
                     };
 
-                    await new Promise((resolve, reject) => {
-                        script.onerror = () => reject(new Error(`Failed to load from ${source}`));
+                    await new Promise(function(resolve, reject) {
+                        script.onerror = function() {
+                            reject(new Error('Failed to load from ' + source));
+                        };
                         document.head.appendChild(script);
                         
                         // Check for initialization
-                        const check = setInterval(() => {
+                        const check = setInterval(function() {
                             if (window.pygame && typeof window.pygame.import === 'function') {
                                 clearInterval(check);
                                 resolve();
                             }
                         }, 500);
                         
-                        setTimeout(() => {
+                        setTimeout(function() {
                             clearInterval(check);
-                            reject(new Error(`Timeout loading from ${source}`));
+                            reject(new Error('Timeout loading from ' + source));
                         }, CONFIG.LOAD_TIMEOUT);
                     });
                     
-                    debugLog(`Successfully loaded from ${source}`);
+                    debugLog('Successfully loaded from ' + source);
                     return true;
                     
                 } catch (error) {
-                    debugLog(`Failed with source ${source}: ${error.message}`);
+                    debugLog('Failed with source ' + source + ': ' + error.message);
                     // Remove failed script
-                    document.querySelectorAll(`script[src="${source}"]`).forEach(s => s.remove());
+                    document.querySelectorAll('script[src="' + source + '"]').forEach(function(s) {
+                        s.remove();
+                    });
                 }
             }
             
-            showError('Failed to load pygame-web from all sources. Please try:\n1. Refreshing the page\n2. Using Chrome/Edge browser\n3. Checking your network connection');
+            showError('Failed to load pygame-web from all sources. Please try:\\n1. Refreshing the page\\n2. Using Chrome/Edge browser\\n3. Checking your network connection');
             return false;
         }
 
@@ -273,7 +274,7 @@
                     debugLog("Audio context initialized");
                 }
             } catch (error) {
-                debugLog(`Audio init warning: ${error.message}`);
+                debugLog('Audio init warning: ' + error.message);
             }
         }
 
@@ -299,9 +300,11 @@
                 updateStatus("Installing dependencies...");
                 try {
                     await window.pygame.installPackages(['pygame-base']);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(function(resolve) {
+                        setTimeout(resolve, 2000);
+                    });
                 } catch (installError) {
-                    debugLog(`Dependency install warning: ${installError.message}`);
+                    debugLog('Dependency install warning: ' + installError.message);
                 }
 
                 // Load main game
@@ -314,21 +317,23 @@
                 // Success
                 GameState.gameStarted = true;
                 elements.overlay.classList.add('hidden');
-                setTimeout(() => elements.overlay.style.display = 'none', 500);
+                setTimeout(function() {
+                    elements.overlay.style.display = 'none';
+                }, 500);
 
             } catch (error) {
-                debugLog(`Game start failed: ${error.message}`);
-                showError(`Game failed to start: ${error.message}`);
+                debugLog('Game start failed: ' + error.message);
+                showError('Game failed to start: ' + error.message);
                 GameState.userInteracted = false;
                 elements.startButton.style.display = 'block';
             }
         }
 
         // Main initialization
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', async function() {
             // Event listeners
             elements.startButton.addEventListener('click', handleUserInteraction);
-            elements.canvas.addEventListener('click', () => {
+            elements.canvas.addEventListener('click', function() {
                 if (GameState.pygameReady && !GameState.gameStarted) {
                     handleUserInteraction();
                 }
@@ -345,19 +350,23 @@
         });
 
         // Global error handling
-        window.addEventListener('error', (event) => {
-            debugLog(`Global error: ${event.error?.message || event.message}`);
+        window.addEventListener('error', function(event) {
+            debugLog('Global error: ' + (event.error ? event.error.message : event.message));
             if (!GameState.gameStarted) {
                 showError("Unexpected error occurred. Check debug info.");
             }
         });
 
         // Prevent context menu
-        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
         
         // Prevent zoom on mobile
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) e.preventDefault();
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
         });
 
         // Make functions global
